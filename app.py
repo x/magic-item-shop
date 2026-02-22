@@ -1,5 +1,19 @@
-"""FastAPI backend for the Magic Item Shop RAG chatbot."""
+"""FastAPI backend for the Magic Item Shop RAG chatbot.
 
+Architecture: tool-call-driven RAG
+  Instead of always retrieving items before every response, we give the LLM
+  a `search_magic_items` tool and let it decide when to use it. The /chat
+  endpoint runs a simple tool-calling loop:
+
+    1. Send user message → LLM (with tool definition)
+    2. If LLM calls the tool → run ChromaDB retrieval → send result back → get final response
+    3. If LLM responds directly → use that response as-is
+
+  This means casual conversation ("How are you?") never touches ChromaDB,
+  while inventory questions trigger focused, query-specific retrieval.
+"""
+
+import json
 import logging
 import uuid
 
@@ -16,15 +30,16 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---
-MODEL = "vertex_ai/gemini-2.0-flash-lite"
+MODEL = "vertex_ai/gemini-2.5-flash-lite"
 CHROMA_PATH = "chroma_data"
 COLLECTION_NAME = "magic_items"
 TOP_K = 5
+MAX_TOOL_ITERATIONS = 3  # safety cap on the tool-calling loop
 
 # --- ChromaDB setup (read-only at runtime) ---
 chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
 collection = chroma_client.get_collection(COLLECTION_NAME)
-print(f"Loaded ChromaDB collection with {collection.count()} items")
+logger.info("Loaded ChromaDB collection with %d items", collection.count())
 
 # --- Session storage ---
 sessions: dict[str, list[dict]] = {}
@@ -32,7 +47,10 @@ sessions: dict[str, list[dict]] = {}
 # --- FastAPI app ---
 app = FastAPI()
 
-SYSTEM_PROMPT_TEMPLATE = """\
+# --- Static system prompt (no template injection needed anymore) ---
+SYSTEM_PROMPT = {
+    "role": "system",
+    "content": """\
 <role>
 You are the Keeper of Curious Things, proprietor of a magic item shop that exists
 in the spaces between planes. Your shop has no fixed door, it simply appears when
@@ -45,21 +63,45 @@ unsettling quality, as though you know more about the customer's fate than you
 let on. You occasionally reference things the customer hasn't told you yet.
 </role>
 
-<context>
-{retrieved_items}
-</context>
-
 <instructions>
-- Answer using ONLY the magic items provided in <context>.
-- If no relevant items appear in context, say you'll have to check the back room,
-  and suggest the customer describe what they need differently.
-- Include item type, rarity, and attunement requirements when describing items.
-- Keep responses concise but informative.
+- When a customer asks about magic items, use the search_magic_items tool to look
+  up relevant items in your inventory before responding.
+- After searching, describe the retrieved items including type, rarity, and
+  attunement requirements.
 - Occasionally hint that you know why the customer really needs the item.
 - Refer to items as though they are old acquaintances: "Ah, this one has been
   waiting for someone like you."
+- For casual conversation or questions unrelated to inventory, respond directly
+  without searching — no need to consult the shelves for small talk.
 </instructions>
-"""
+""",
+}
+
+# --- Tool definition (plain dict — no framework magic) ---
+# This is the schema LiteLLM sends to the model so it knows what tools exist.
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search_magic_items",
+            "description": (
+                "Search the shop's inventory for magic items matching a description. "
+                "Use this whenever a customer asks about items, their properties, or "
+                "what you have available."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "A natural-language description of the items to search for.",
+                    }
+                },
+                "required": ["query"],
+            },
+        },
+    }
+]
 
 
 class ChatRequest(BaseModel):
@@ -72,14 +114,17 @@ class ChatResponse(BaseModel):
     session_id: str
 
 
-def retrieve_items(query: str, top_k: int = TOP_K) -> str:
-    """Query ChromaDB and return formatted item texts."""
+def search_magic_items(query: str, top_k: int = TOP_K) -> str:
+    """Execute a ChromaDB similarity search and return formatted results.
+
+    This is called when the LLM decides to invoke the search_magic_items tool.
+    The return value is sent back to the model as the tool result.
+    """
     results = collection.query(query_texts=[query], n_results=top_k)
     documents = results["documents"][0]
     distances = results["distances"][0]
     metadatas = results["metadatas"][0]
 
-    logger.info("RAG query: %r", query)
     formatted = []
     for doc, dist, meta in zip(documents, distances, metadatas):
         name = meta.get("name", "unknown")
@@ -90,18 +135,66 @@ def retrieve_items(query: str, top_k: int = TOP_K) -> str:
     return "\n---\n".join(formatted)
 
 
-def build_system_prompt(retrieved_items: str) -> dict:
-    """Format the system prompt with retrieved context."""
-    return {
-        "role": "system",
-        "content": SYSTEM_PROMPT_TEMPLATE.format(retrieved_items=retrieved_items),
-    }
+# Maps tool names to their implementations.
+# Adding a new tool = add the function + an entry here + a schema in TOOLS.
+TOOL_FN_MAP = {
+    "search_magic_items": search_magic_items,
+}
 
 
-def generate_response(messages: list[dict]) -> str:
-    """Call LiteLLM with the assembled messages."""
+def run_tool_calling_loop(messages: list[dict]) -> str:
+    """Send messages to the LLM and handle tool calls until we get a final response.
+
+    The loop:
+      - Call the LLM with the current message list and tool definitions
+      - If the model returns a tool_call: execute it, append the result, repeat
+      - If the model returns a plain text response: return it
+
+    A MAX_TOOL_ITERATIONS cap prevents runaway loops.
+    """
+    for iteration in range(MAX_TOOL_ITERATIONS):
+        response = litellm.completion(model=MODEL, messages=messages, tools=TOOLS)
+        choice = response.choices[0]
+
+        # No tool call → plain response, we're done
+        if choice.finish_reason != "tool_calls":
+            logger.info("KEEPER: %s", choice.message.content)
+            return choice.message.content
+
+        # The model wants to call a tool — extract the call(s)
+        tool_calls = choice.message.tool_calls
+
+        # Append the assistant's tool-call message to the conversation
+        # (the model's "I want to call this tool" turn must stay in history)
+        messages.append(choice.message)
+
+        # Execute each requested tool call and append results
+        for tool_call in tool_calls:
+            fn_name = tool_call.function.name
+            fn_args = json.loads(tool_call.function.arguments)
+            kwargs_str = ", ".join(f'{k}="{v}"' if isinstance(v, str) else f"{k}={v}" for k, v in fn_args.items())
+            logger.info("TOOL_CALL: %s(%s)", fn_name, kwargs_str)
+
+            fn = TOOL_FN_MAP.get(fn_name)
+            result = fn(**fn_args) if fn else f"Unknown tool: {fn_name}"
+
+            logger.info("TOOL_RESPONSE: %s", result)
+
+            # Tool result message — role "tool", tied to the call by tool_call_id
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result,
+                }
+            )
+
+    # Fell through the loop — ask for a final answer without tools as a fallback
+    logger.warning("Hit MAX_TOOL_ITERATIONS (%d), forcing final response", MAX_TOOL_ITERATIONS)
     response = litellm.completion(model=MODEL, messages=messages)
-    return response.choices[0].message.content
+    final_text = response.choices[0].message.content
+    logger.info("KEEPER: %s", final_text)
+    return final_text
 
 
 @app.get("/")
@@ -116,18 +209,17 @@ async def chat(request: ChatRequest) -> ChatResponse:
     if session_id not in sessions:
         sessions[session_id] = []
 
-    # RAG retrieval based on the latest user message
-    retrieved_items = retrieve_items(request.message)
-    system_prompt = build_system_prompt(retrieved_items)
-
-    # Assemble full message list
     user_message = {"role": "user", "content": request.message}
-    messages = [system_prompt] + sessions[session_id] + [user_message]
+    logger.info("USER: %s", request.message)
 
-    # Generate response
-    assistant_text = generate_response(messages)
+    # Assemble: static system prompt + conversation history + new user message
+    messages = [SYSTEM_PROMPT] + sessions[session_id] + [user_message]
 
-    # Store conversation turns (not the system prompt)
+    # Run the tool-calling loop — may invoke search_magic_items zero or more times
+    assistant_text = run_tool_calling_loop(messages)
+
+    # Persist only the clean user/assistant turns in session history
+    # (tool call/result messages are ephemeral — they don't need to carry forward)
     sessions[session_id].append(user_message)
     sessions[session_id].append({"role": "assistant", "content": assistant_text})
 
