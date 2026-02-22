@@ -1,0 +1,9 @@
+# [Vyra’s Broken Path](https://www.dndbeyond.com/magic-items/9445586-vyras-broken-path)
+
+#Wondrous *item,* #VeryRare *(requires attunement by an elf or half-elf)*
+
+This cloak once belonged to an elven archer of masterful skill. Its shoulders are ornamented with furs and seasonal leaves, and it bears a clasp at its center made from intertwined branches. While wearing the cloak, you have advantage on Dexterity ([Stealth](https://www.dndbeyond.com/sources/dnd/free-rules/playing-the-game#Skills)) checks. As a bonus action, you can use a free hand to break the cloak’s clasp and transform the cloak into a [[Weapon, +1, +2, or +3|+3 Longbow]] that appears in your hand. While attuned to the cloak, you are proficient with this magical longbow, and your ranged attacks with it ignore [half cover](https://www.dndbeyond.com/sources/basic-rules/combat#Cover). While holding the bow, you can use a bonus action to speak its command phrase in Elvish, “The arrow’s path was true.” When you do, the bow transforms into the cloak again and appears draped around your shoulders or in your hand (your choice).
+
+While the cloak or bow is on your person, you can use an action to focus your awareness on the surrounding region. For 1 hour, you can sense if any of the following creature types are present within 1 mile of you: aberrations, celestials, dragons, elementals, fey, fiends, and undead. You know the type of any being whose presence you sense, but not its identity. This property doesn’t reveal the creatures’ location or number. Once this property of the cloak has been used, it can’t be used again until the next dawn.
+
+#GriffonsSaddlebag 

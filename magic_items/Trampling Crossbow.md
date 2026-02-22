@@ -1,0 +1,7 @@
+# [Trampling Crossbow](https://www.dndbeyond.com/magic-items/9445552-trampling-crossbow)
+
+#Weapon *(crossbow, heavy),* #Uncommon 
+
+This heavy crossbow carries with it the force of a raging bull. When you roll a 20 on an attack roll made with this magic weapon, the bolt transforms into a spectral stampede immediately after it hits the target. When it does, the target and up to 2 other targets of your choice that you can see within 15 feet of it must make a DC 13 Strength saving throw. On a failed save, a target takes 1d8 bludgeoning damage, and if it is Large or smaller, it’s pushed 10 feet away from you. On a successful save, a target takes half as much bludgeoning damage and isn’t pushed. This bludgeoning damage is doubled against objects and structures.
+
+#GriffonsSaddlebag 

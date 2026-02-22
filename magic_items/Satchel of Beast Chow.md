@@ -1,0 +1,7 @@
+# [Satchel of Beast Chow](https://www.dndbeyond.com/magic-items/9445458-satchel-of-beast-chow)
+
+#Wondrous *item,* #Uncommon 
+
+This hefty satchel is 1 foot tall, weighs 2 pounds, and has 2d4 + 2 servings of magical, nondescript food inside it when found. The morsels of food come in small, half-inch cubes and smell as if they could have been made of either savory meats, enriched plants, or both. If a beast or monstrosity with a challenge rating of 2 or lower and an Intelligence of 3 or lower eats a serving of this food from your hand or similar outstretched vessel, it must succeed on a DC 15 Wisdom saving throw or be [charmed](https://www.dndbeyond.com/sources/dnd/free-rules/rules-glossary#CharmedCondition) by you for 1 hour. While charmed, the creature regards you and your companions as friends, and you have advantage on Wisdom ([Animal Handling](https://www.dndbeyond.com/sources/dnd/free-rules/playing-the-game#Skills)) and Charisma checks made to interact with the creature. If the creature takes any damage from you or your companions for the duration, the charm ends early. If the charm lasts for the full duration, the creature remains nonhostile toward you until you threaten it.
+
+#GriffonsSaddlebag 

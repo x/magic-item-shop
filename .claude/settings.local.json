@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(head:*)",
+      "Bash(wc:*)",
+      "Bash(awk 'END{print}')",
+      "Bash(uv init:*)",
+      "Bash(uv:*)"
+    ]
+  }
+}

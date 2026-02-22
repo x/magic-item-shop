@@ -1,0 +1,5 @@
+# [Hat of Vermin](https://www.dndbeyond.com/magic-items/27049-hat-of-vermin)
+
+#Wondrous *Item*, #Common
+
+This hat has 3 charges. While holding the hat, you can take a [Magic](https://www.dndbeyond.com/sources/dnd/free-rules/rules-glossary#MagicAction) action to expend 1 charge and summon your choice of a [Bat](https://www.dndbeyond.com/monsters/4775803-bat), a [Frog](https://www.dndbeyond.com/monsters/4775816-frog), or a [Rat](https://www.dndbeyond.com/monsters/4775836-rat). The summoned creature magically appears in the hat and tries to get away from you as quickly as possible. The creature is [Indifferent](https://www.dndbeyond.com/sources/dnd/free-rules/rules-glossary#IndifferentAttitude) toward you and other creatures, and it isn’t under your control. It behaves as an ordinary creature of its kind and disappears after 1 hour or when it drops to 0 Hit Points. The hat regains all expended charges daily at dawn.

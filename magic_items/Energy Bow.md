@@ -1,0 +1,13 @@
+# [Energy Bow](https://www.dndbeyond.com/magic-items/9058960-energy-bow)
+
+#Weapon *(Longbow or Shortbow),* #VeryRare *(Requires Attunement)*
+
+You gain a +1 bonus to attack rolls and damage rolls made with this magic weapon, which has no string. Each time you pull your arm back in a firing motion, a magical arrow made of golden energy appears nocked and ready to fire. An arrow produced by this weapon deals Force damage instead of Piercing damage on a hit, and it disappears after it hits or misses its target. Until it disappears, the arrow emits [Bright Light](https://www.dndbeyond.com/sources/dnd/free-rules/rules-glossary#BrightLight) in a 20-foot radius and [Dim Light](https://www.dndbeyond.com/sources/dnd/free-rules/rules-glossary#DimLight) for an additional 20 feet.
+
+This weapon has the following additional properties.
+
+**_Arrow of Restraint._** Whenever you use this weapon to make a ranged attack against a creature, you can try to restrain the target instead of dealing damage to it. If the arrow hits, the target must succeed on a DC 15 Strength saving throw or have the [Restrained](https://www.dndbeyond.com/sources/dnd/free-rules/rules-glossary#RestrainedCondition) condition for 1 minute. As an action, a creature Restrained by an arrow can make a DC 20 Strength ([Athletics](https://www.dndbeyond.com/sources/dnd/free-rules/playing-the-game#Skills)) check to try to break the restraint, ending the effect on itself on a successful check.
+
+**_Arrow of Transport._** As a [Magic](https://www.dndbeyond.com/sources/dnd/free-rules/rules-glossary#MagicAction) action, you can fire one energy arrow from this weapon at a target you can see within 60 feet of yourself. The target can be either a willing Medium or smaller creature or an object that isn’t being worn or carried, provided the object is small enough to fit inside a 5-foot [Cube](https://www.dndbeyond.com/sources/dnd/free-rules/rules-glossary#CubeAreaofEffect). The arrow teleports the target to an unoccupied space you can see within 10 feet of you.
+
+**_Energy Ladder._** As a [Magic](https://www.dndbeyond.com/sources/dnd/free-rules/rules-glossary#MagicAction) action, you can loose a flurry of energy arrows from this weapon at a wall up to 60 feet away from yourself. The arrows become glowing rungs that stick out of the wall, forming a magical ladder up to 60 feet long on the wall. This ladder lasts for 1 minute before disappearing.
