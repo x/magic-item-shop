@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 MODEL = "vertex_ai/gemini-2.5-flash-lite"
 CHROMA_PATH = "chroma_data"
 COLLECTION_NAME = "magic_items"
-TOP_K = 5
+RETRIEVE_N = 10   # how many candidates to pull from ChromaDB
+RERANK_TOP_K = 3  # how many to keep after re-ranking
 MAX_TOOL_ITERATIONS = 3  # safety cap on the tool-calling loop
 
 # --- ChromaDB setup (read-only at runtime) ---
@@ -114,22 +115,62 @@ class ChatResponse(BaseModel):
     session_id: str
 
 
-def search_magic_items(query: str, top_k: int = TOP_K) -> str:
-    """Execute a ChromaDB similarity search and return formatted results.
+def rerank(query: str, documents: list[str], top_k: int = RERANK_TOP_K) -> list[int]:
+    """Re-rank candidate documents against a query using the LLM.
 
-    This is called when the LLM decides to invoke the search_magic_items tool.
-    The return value is sent back to the model as the tool result.
+    Sends all candidates in a single LLM call and asks for a ranked list of
+    indices.  Returns up to top_k indices in descending relevance order.
     """
-    results = collection.query(query_texts=[query], n_results=top_k)
+    numbered = "\n\n".join(f"[{i}] {doc}" for i, doc in enumerate(documents))
+    prompt = (
+        f"You are a relevance ranking assistant.\n\n"
+        f"Query: {query}\n\n"
+        f"Candidates:\n{numbered}\n\n"
+        f"Return ONLY a JSON array of the candidate indices ordered from most to "
+        f"least relevant to the query. Example: [2, 0, 1]. Include all indices."
+    )
+    response = litellm.completion(
+        model=MODEL,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = response.choices[0].message.content.strip()
+    # Strip markdown code fences if present
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    ranked_indices = json.loads(raw.strip())
+    logger.info("Re-rank order: %s → keeping top %d", ranked_indices, top_k)
+    return ranked_indices[:top_k]
+
+
+def search_magic_items(query: str) -> str:
+    """Execute a ChromaDB similarity search, re-rank, and return top results.
+
+    1. Retrieve RETRIEVE_N candidates via vector similarity.
+    2. Re-rank with the LLM to find the most relevant RERANK_TOP_K items.
+    3. Return those items formatted for the model.
+    """
+    results = collection.query(query_texts=[query], n_results=RETRIEVE_N)
     documents = results["documents"][0]
     distances = results["distances"][0]
     metadatas = results["metadatas"][0]
 
+    # Log initial retrieval
+    for meta, dist in zip(metadatas, distances):
+        logger.info("  retrieved: %r (relevance=%.2f)", meta.get("name", "?"), 1 - dist)
+
+    # Re-rank and select top K
+    top_indices = rerank(query, documents)
+
     formatted = []
-    for doc, dist, meta in zip(documents, distances, metadatas):
+    for idx in top_indices:
+        doc = documents[idx]
+        meta = metadatas[idx]
+        dist = distances[idx]
         name = meta.get("name", "unknown")
         relevance = 1 - dist
-        logger.info("  retrieved: %r (relevance=%.2f)", name, relevance)
+        logger.info("  reranked top: %r (relevance=%.2f)", name, relevance)
         formatted.append(f"[relevance: {relevance:.2f}]\n{doc}")
 
     return "\n---\n".join(formatted)
