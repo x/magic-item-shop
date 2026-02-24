@@ -31,3 +31,5 @@ Indexing runs at build time. The image is fully self-contained:
 docker build -t magic-item-shop .
 docker run -p 8000:8000 magic-item-shop
 ```
+
+
